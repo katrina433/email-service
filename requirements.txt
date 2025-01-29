@@ -1,0 +1,6 @@
+aiomysql
+fastapi
+pydantic
+pymysql
+sqlalchemy
+uvicorn

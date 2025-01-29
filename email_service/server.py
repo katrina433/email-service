@@ -50,7 +50,7 @@ class Server:
             return res.unique().scalars().all()
         except Exception as e:
             traceback.print_exc()
-            return HTTPException(status_code=500, detail=f"Internal Error {e}")
+            raise HTTPException(status_code=500, detail=f"Internal Error {e}")
     
     async def create_nonprofit(self, nonprofit: orm.Nonprofit, db: AsyncSession = Depends(get_db)):
         try:
@@ -59,10 +59,10 @@ class Server:
             await db.commit()
         except IntegrityError as e:
             traceback.print_exc()
-            return HTTPException(status_code=422, detail=f"Invalid input {e}")
+            raise HTTPException(status_code=422, detail=f"Invalid input {e}")
         except Exception as e:
             traceback.print_exc()
-            return HTTPException(status_code=500, detail=f"Internal error {e}")
+            raise HTTPException(status_code=500, detail=f"Internal error {e}")
 
     async def delete_nonprofit(self, email_address: str, db: AsyncSession = Depends(get_db)):
         try:
@@ -78,7 +78,7 @@ class Server:
             raise e
         except Exception as e:
             traceback.print_exc()
-            return HTTPException(status_code=500, detail=f"Internal error {e}")
+            raise HTTPException(status_code=500, detail=f"Internal error {e}")
     
     async def get_email(
         self,
@@ -104,22 +104,26 @@ class Server:
             return res.unique().scalars().all()
         except Exception as e:
             traceback.print_exc()
-            return HTTPException(status_code=500, detail=f"Internal Error {e}")
+            raise HTTPException(status_code=500, detail=f"Internal Error {e}")
     
     async def create_email(self, email: orm.Email, db: AsyncSession = Depends(get_db)):
         try:
-            db_email = models.Email(**email.model_dump(exclude="recipients"))
+            db_email = models.Email(**email.model_dump(exclude=["recipients", "cc", "bcc"]))
             db.add(db_email)
             await db.flush()
             db_recipients = [models.EmailRecipient(email_id=db_email.id, email_address=r) for r in email.recipients]
+            db_cc = [models.EmailCc(email_id=db_email.id, email_address=r) for r in email.cc]
+            db_bcc = [models.EmailBcc(email_id=db_email.id, email_address=r) for r in email.bcc]
             db.add_all(db_recipients)
+            db.add_all(db_cc)
+            db.add_all(db_bcc)
             await db.commit()
         except IntegrityError as e:
             traceback.print_exc()
-            return HTTPException(status_code=422, detail=f"Invalid input {e}")
+            raise HTTPException(status_code=422, detail=f"Invalid input {e}")
         except Exception as e:
             traceback.print_exc()
-            return HTTPException(status_code=500, detail=f"Internal Error {e}")
+            raise HTTPException(status_code=500, detail=f"Internal Error {e}")
 
     async def create_templated_email(self, template: orm.TemplatedEmail, db: AsyncSession = Depends(get_db)):
         try:
@@ -137,14 +141,23 @@ class Server:
             db.add_all(db_emails)
             await db.flush()
             db_recipients = [models.EmailRecipient(email_id=e.id, email_address=n.email_address) for e, n in zip(db_emails, db_nonprofits)]
+            db_cc = []
+            db_bcc = []
+            for db_email in db_emails:
+                for cc in template.cc:
+                    db_cc.append(models.EmailCc(email_id=db_email.id, email_address = cc))
+                for bcc in template.bcc:
+                    db_bcc.append(models.EmailBcc(email_id=db_email.id, email_address = bcc))
             db.add_all(db_recipients)
+            db.add_all(db_cc)
+            db.add_all(db_bcc)
             await db.commit()
         except IntegrityError as e:
             traceback.print_exc()
-            return HTTPException(status_code=422, detail=f"Invalid input {e}")
+            raise HTTPException(status_code=422, detail=f"Invalid input {e}")
         except Exception as e:
             traceback.print_exc()
-            return HTTPException(status_code=500, detail=f"Internal Error {e}")
+            raise HTTPException(status_code=500, detail=f"Internal Error {e}")
         
 
 if __name__ == "__main__":
