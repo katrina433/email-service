@@ -24,9 +24,30 @@ class Email(Base):
     subject = Column(String(255))
     content = Column(String(5000))
     recipients = relationship("EmailRecipient", backref="email", cascade="all,delete", lazy="joined")
+    cc = relationship("EmailCc", backref="email", cascade="all,delete", lazy="joined")
+    bcc = relationship("EmailBcc", backref="email", cascade="all,delete", lazy="joined")
+
+"""
+class EmailDraft(Base):
+    email_id = Column(Integer, ForeignKey("email.id", ondelete="CASCADE"), primary_key=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+"""
 
 class EmailRecipient(Base):
     __tablename__ = "email_receipient"
 
     email_id = Column(Integer, ForeignKey("email.id", ondelete="CASCADE"), primary_key=True)
     email_address = Column(String(50), ForeignKey("nonprofit.email_address", ondelete="CASCADE"), primary_key=True)
+
+class EmailCc(Base):
+    __tablename__ = "email_cc"
+
+    email_id = Column(Integer, ForeignKey("email.id", ondelete="CASCADE"), primary_key=True)
+    email_address = Column(String(50), primary_key=True)
+
+class EmailBcc(Base):
+    __tablename__ = "email_bcc"
+
+    email_id = Column(Integer, ForeignKey("email.id", ondelete="CASCADE"), primary_key=True)
+    email_address = Column(String(50), primary_key=True)
